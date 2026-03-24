@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>arXiv Digest</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #d4d4d4;
+      font-family: 'Georgia', serif;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 1.5rem 1rem;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Courier New', monospace;
+      font-size: 1.4rem;
+      color: #c8b87a;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      color: #888;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .chip {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid #333;
+      border-radius: 3px;
+      background: #1a1a1a;
+      color: #888;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .chip.selected {
+      border-color: #c8b87a;
+      color: #c8b87a;
+      background: #1f1c10;
+    }
+
+    .chip:hover:not(.selected) {
+      border-color: #555;
+      color: #aaa;
+    }
+
+    #fetch-btn {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      padding: 0.55rem 1.2rem;
+      background: #c8b87a;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      transition: opacity 0.15s;
+      margin-bottom: 1.5rem;
+    }
+
+    #fetch-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    #status {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    .error-box {
+      background: #1a0a0a;
+      border: 1px solid #5c2020;
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: #cc6666;
+      margin-bottom: 1rem;
+    }
+
+    .papers {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 5px;
+      padding: 1rem 1.1rem;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .category-tag {
+      font-family: 'Courier New', monospace;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.45rem;
+      border: 1px solid #333;
+      border-radius: 2px;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+
+    .arxiv-link {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      color: #c8b87a;
+      text-decoration: none;
+    }
+
+    .arxiv-link:hover {
+      text-decoration: underline;
+    }
+
+    .card-title {
+      font-style: italic;
+      color: #bbb;
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
+      line-height: 1.4;
+    }
+
+    .card-tldr {
+      font-size: 0.88rem;
+      color: #c0c0c0;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-angle-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.65rem;
+      color: #c8b87a;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+
+    .card-angle {
+      font-size: 0.85rem;
+      color: #a0a08a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>arXiv Digest</h1>
+    <p class="subtitle">// recent papers · claude-curated</p>
+
+    <p class="section-label">Categories</p>
+    <div class="chips" id="chips"></div>
+
+    <button id="fetch-btn" disabled>Fetch digest (0)</button>
+
+    <div id="status"></div>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const CATEGORIES = [
+      { id: "cs.CR",    label: "Cryptography" },
+      { id: "cs.IT",    label: "Info Theory" },
+      { id: "quant-ph", label: "Quantum" },
+      { id: "cs.AI",    label: "AI" },
+      { id: "cs.LG",    label: "ML" },
+      { id: "cs.MA",    label: "Multi-Agent" },
+      { id: "eess.SY",  label: "Power Systems" },
+      { id: "cs.SY",    label: "Ctrl Systems" },
+      { id: "math.NT",  label: "Number Theory" },
+    ];
+
+    const DEFAULT_SELECTED = new Set(["cs.CR", "cs.AI", "quant-ph"]);
+
+    let selected = new Set(DEFAULT_SELECTED);
+
+    const chipsEl = document.getElementById("chips");
+    const fetchBtn = document.getElementById("fetch-btn");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    // Build chips
+    CATEGORIES.forEach(({ id, label }) => {
+      const chip = document.createElement("button");
+      chip.className = "chip" + (selected.has(id) ? " selected" : "");
+      chip.textContent = label;
+      chip.dataset.id = id;
+      chip.addEventListener("click", () => {
+        if (selected.has(id)) {
+          selected.delete(id);
+          chip.classList.remove("selected");
+        } else {
+          selected.add(id);
+          chip.classList.add("selected");
+        }
+        updateBtn();
+      });
+      chipsEl.appendChild(chip);
+    });
+
+    function updateBtn() {
+      const n = selected.size;
+      fetchBtn.disabled = n === 0;
+      fetchBtn.textContent = `Fetch digest (${n})`;
+    }
+
+    updateBtn();
+
+    fetchBtn.addEventListener("click", async () => {
+      if (selected.size === 0) return;
+
+      fetchBtn.disabled = true;
+      statusEl.textContent = "Fetching papers and summarizing with Claude…";
+      resultsEl.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/digest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ categories: [...selected] }),
+        });
+        const data = await res.json();
+
+        statusEl.textContent = "";
+
+        if (data.error) {
+          resultsEl.innerHTML = `<div class="error-box">Error: ${escHtml(data.error)}</div>`;
+        } else if (!Array.isArray(data) || data.length === 0) {
+          resultsEl.innerHTML = `<div class="error-box">No papers returned.</div>`;
+        } else {
+          renderPapers(data);
+        }
+      } catch (err) {
+        statusEl.textContent = "";
+        resultsEl.innerHTML = `<div class="error-box">Network error: ${escHtml(err.message)}</div>`;
+      } finally {
+        updateBtn();
+      }
+    });
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function renderPapers(papers) {
+      const container = document.createElement("div");
+      container.className = "papers";
+
+      papers.forEach(paper => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const meta = document.createElement("div");
+        meta.className = "card-meta";
+
+        const catTag = document.createElement("span");
+        catTag.className = "category-tag";
+        catTag.textContent = paper.category;
+
+        const link = document.createElement("a");
+        link.className = "arxiv-link";
+        link.href = paper.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = paper.arxiv_id;
+
+        meta.appendChild(catTag);
+        meta.appendChild(link);
+
+        const title = document.createElement("p");
+        title.className = "card-title";
+        title.textContent = paper.title;
+
+        const tldr = document.createElement("p");
+        tldr.className = "card-tldr";
+        tldr.textContent = paper.tldr;
+
+        card.appendChild(meta);
+        card.appendChild(title);
+        card.appendChild(tldr);
+
+        if (paper.angle) {
+          const angleLabel = document.createElement("p");
+          angleLabel.className = "card-angle-label";
+          angleLabel.textContent = "Why it matters";
+
+          const angle = document.createElement("p");
+          angle.className = "card-angle";
+          angle.textContent = paper.angle;
+
+          card.appendChild(angleLabel);
+          card.appendChild(angle);
+        }
+
+        container.appendChild(card);
+      });
+
+      resultsEl.appendChild(container);
+    }
+  </script>
+</body>
+</html>
