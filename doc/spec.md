@@ -218,3 +218,5 @@ After `wrangler deploy`, the Worker is live at `https://arxiv-digest.{your-subdo
 - Workers runtime is not Node.js — no `require()`, no `fs`, no `path`. Use ES module `import` syntax or inline everything in `worker.js`.
 - The `index.html` content can be inlined as a string constant in `worker.js` or read from a KV binding — inlining is simpler for a project this size.
 - Keep `worker.js` under ~300 lines. If it grows beyond that, extract arXiv fetching and Claude calling into named functions in the same file.
+- The version uploaded to Cloudflare should be compiled/cminified with `ncc` so we don't have to worry too much about not having Node.js
+- 
