@@ -28,7 +28,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const SYSTEM_PROMPT = `You are a research assistant helping a reader who works in cryptography, IETF protocol design, post-quantum cryptography, and ML systems.
+const SYSTEM_PROMPT = `You are a research assistant helping a reader who works in cryptography, IEEE PES protocol design, post-quantum cryptography, and ML systems.
 
 Given a list of recent arXiv papers (title + abstract snippet), select the most interesting ones and return a JSON array. Pick at most 3 papers per category. Omit papers that are routine incremental work.
 
