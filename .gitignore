@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Wrangler build output and cache
+.wrangler/
+dist/
+
+# Local development secrets (copy dot-env → .dev.vars, then fill in values)
+.dev.vars
+
+# Local env overrides
+.env

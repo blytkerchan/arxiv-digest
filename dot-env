@@ -1,0 +1,8 @@
+# Copy this file to .dev.vars for local development.
+# .dev.vars is read by `wrangler dev` and is gitignored — never commit it.
+#
+# Usage:
+#   cp dot-env .dev.vars
+#   # edit .dev.vars and fill in real values
+
+ANTHROPIC_API_KEY=your_anthropic_api_key_here

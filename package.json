@@ -1,0 +1,17 @@
+{
+  "name": "arxiv-digest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker that fetches arXiv papers and curates them with Claude",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "secret:set": "wrangler secret put ANTHROPIC_API_KEY",
+    "secret:list": "wrangler secret list",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  }
+}
