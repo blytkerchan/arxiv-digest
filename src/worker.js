@@ -18,8 +18,8 @@ const ARXIV_BASE =
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
-const CLAUDE_MAX_TOKENS = 4000;
+const CLAUDE_MODEL = "claude-sonnet-4-6";
+const CLAUDE_MAX_TOKENS = 1024;
 const ABSTRACT_MAX_CHARS = 400;
 
 const CORS_HEADERS = {
@@ -94,7 +94,7 @@ async function handleDigest(request, env) {
 
   // Validate API key is configured
   if (!env.ANTHROPIC_API_KEY) {
-    return jsonError("ANTHROPIC_API_KEY is not configured");
+    return jsonError("ANTHROPIC_API_KEY is not configured", 500);
   }
 
   // 2. Fetch arXiv papers for all categories in parallel
@@ -112,7 +112,7 @@ async function handleDigest(request, env) {
   }
 
   if (papers.length === 0) {
-    return jsonError("No papers fetched from arXiv");
+    return jsonError("No papers fetched from arXiv", 502);
   }
 
   // 3. Call Claude to summarize / curate
@@ -120,7 +120,7 @@ async function handleDigest(request, env) {
   try {
     claudeSummaries = await callClaude(papers, env.ANTHROPIC_API_KEY);
   } catch (err) {
-    return jsonError(err.message);
+    return jsonError(err.message, 502);
   }
 
   // 4. Merge Claude's selections back onto paper objects
@@ -219,6 +219,13 @@ async function callClaude(papers, apiKey) {
     )
     .join("\n\n");
 
+  const body = JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: CLAUDE_MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+
   const resp = await fetch(ANTHROPIC_ENDPOINT, {
     method: "POST",
     headers: {
@@ -226,16 +233,19 @@ async function callClaude(papers, apiKey) {
       "x-api-key": apiKey,
       "anthropic-version": ANTHROPIC_VERSION,
     },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: CLAUDE_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    }),
+    body,
   });
 
   if (!resp.ok) {
-    throw new Error(`Claude API error: ${resp.status}`);
+    let detail = "";
+    try {
+      const errBody = await resp.json();
+      detail = errBody?.error?.message ?? JSON.stringify(errBody);
+    } catch {
+      detail = await resp.text().catch(() => "");
+    }
+    console.error("Claude API error:", resp.status, detail);
+    throw new Error(`Claude API error ${resp.status}: ${detail}`);
   }
 
   const apiData = await resp.json();
@@ -275,9 +285,9 @@ function extractJsonArray(text) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function jsonError(message) {
+function jsonError(message, status = 400) {
   return new Response(JSON.stringify({ error: message }), {
-    status: 200,
+    status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 }
