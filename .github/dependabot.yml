@@ -8,3 +8,8 @@ updates:
       wrangler:
         patterns:
           - "wrangler"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
