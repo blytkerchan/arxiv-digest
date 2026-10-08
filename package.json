@@ -12,6 +12,6 @@
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "wrangler": "^4.145.0"
+    "wrangler": "^4.147.0"
   }
 }
